@@ -23,15 +23,15 @@ class SettingsStore:
             return AppSettings()
         try:
             payload = json.loads(self.path.read_text(encoding="utf-8"))
+            return AppSettings(
+                data_dir=str(payload.get("data_dir", "")),
+                template_dir=str(payload.get("template_dir", "")),
+                output_dir=str(payload.get("output_dir", "")),
+                theme=str(payload.get("theme", "Obsidian Violet")),
+                font_scale=int(payload.get("font_scale", 100)),
+            )
         except Exception:
             return AppSettings()
-        return AppSettings(
-            data_dir=str(payload.get("data_dir", "")),
-            template_dir=str(payload.get("template_dir", "")),
-            output_dir=str(payload.get("output_dir", "")),
-            theme=str(payload.get("theme", "Obsidian Violet")),
-            font_scale=int(payload.get("font_scale", 100)),
-        )
 
     def save(self, settings: AppSettings) -> None:
         self.path.parent.mkdir(parents=True, exist_ok=True)

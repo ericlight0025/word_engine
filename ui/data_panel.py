@@ -49,7 +49,7 @@ class DataPanel(ctk.CTkFrame):
             text_color="#8f9bad",
             font=ctk.CTkFont(size=12),
         ).pack(side="right")
-        self.hint_var = tk.StringVar(value="雙擊表格儲存格可直接修改；超過 6 欄請用下方編輯區")
+        self.hint_var = tk.StringVar(value=f"雙擊表格儲存格可直接修改；超過 {self.MAX_VISIBLE_COLUMNS} 欄請用下方編輯區")
         ctk.CTkLabel(
             self,
             textvariable=self.hint_var,
@@ -138,7 +138,7 @@ class DataPanel(ctk.CTkFrame):
             text_color="#f1f5f9",
             font=ctk.CTkFont(size=18, weight="bold"),
         ).pack(side="left")
-        self.editor_hint_var = tk.StringVar(value="前 6 欄可直接雙擊表格修改；所有欄位都可在這裡完整編輯並存檔")
+        self.editor_hint_var = tk.StringVar(value=f"前 {self.MAX_VISIBLE_COLUMNS} 欄可直接雙擊表格修改；所有欄位都可在這裡完整編輯並存檔")
         ctk.CTkLabel(
             editor_card,
             textvariable=self.editor_hint_var,
@@ -199,11 +199,11 @@ class DataPanel(ctk.CTkFrame):
         if rows:
             self.table.selection_set(self.table.get_children())
         if has_extra_columns:
-            self.summary_var.set(f"共 {len(rows)} 筆，表格最多顯示 6 欄；其餘欄位請用下方編輯區")
+            self.summary_var.set(f"共 {len(rows)} 筆，表格最多顯示 {self.MAX_VISIBLE_COLUMNS} 欄；其餘欄位請用下方編輯區")
         else:
             self.summary_var.set(f"共 {len(rows)} 筆，已預設全選，可局部產出")
         self.hint_var.set(
-            "雙擊表格儲存格可直接修改；按 Enter 套用。超過 6 欄請用下方編輯區後存回原始檔"
+            f"雙擊表格儲存格可直接修改；按 Enter 套用。超過 {self.MAX_VISIBLE_COLUMNS} 欄請用下方編輯區後存回原始檔"
         )
         self.load_header_editor(headers)
         self.load_editor(headers, rows[0] if rows else {}, 0 if rows else None)

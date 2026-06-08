@@ -27,33 +27,36 @@ def read_excel(path: str | Path) -> ExcelDataset:
         raise ValueError("無法讀取，請確認格式為 .xlsx / .xls")
 
     workbook = load_workbook(file_path, data_only=True, read_only=True)
-    sheet = workbook.active
-    rows_iter = sheet.iter_rows(values_only=True)
-
     try:
-        header_row = next(rows_iter)
-    except StopIteration as exc:
-        raise ValueError("Excel 內容為空") from exc
+        sheet = workbook.active
+        rows_iter = sheet.iter_rows(values_only=True)
 
-    headers = [_stringify(cell) for cell in header_row]
-    if not any(headers):
-        raise ValueError("Excel 第一列缺少欄位名稱")
+        try:
+            header_row = next(rows_iter)
+        except StopIteration as exc:
+            raise ValueError("Excel 內容為空") from exc
 
-    seen: set[str] = set()
-    for header in headers:
-        if not header:
-            raise ValueError("Excel 第一列包含空白欄位名稱")
-        if header in seen:
-            raise ValueError(f"Excel 欄位名稱重複：{header}")
-        seen.add(header)
+        headers = [_stringify(cell) for cell in header_row]
+        if not any(headers):
+            raise ValueError("Excel 第一列缺少欄位名稱")
 
-    data_rows: list[dict[str, str]] = []
-    for row in rows_iter:
-        values = [_stringify(cell) for cell in row[: len(headers)]]
-        if not any(values):
-            continue
-        padded = values + [""] * (len(headers) - len(values))
-        data_rows.append(dict(zip(headers, padded)))
+        seen: set[str] = set()
+        for header in headers:
+            if not header:
+                raise ValueError("Excel 第一列包含空白欄位名稱")
+            if header in seen:
+                raise ValueError(f"Excel 欄位名稱重複：{header}")
+            seen.add(header)
+
+        data_rows: list[dict[str, str]] = []
+        for row in rows_iter:
+            values = [_stringify(cell) for cell in row[: len(headers)]]
+            if not any(values):
+                continue
+            padded = values + [""] * (len(headers) - len(values))
+            data_rows.append(dict(zip(headers, padded)))
+    finally:
+        workbook.close()
 
     if not data_rows:
         raise ValueError("Excel 沒有可用資料列")

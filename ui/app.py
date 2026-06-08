@@ -90,7 +90,7 @@ class WordMergeApp:
         self.template_file_var = ctk.StringVar(value="")
         self.naming_field_var = ctk.StringVar(value="")
         self.theme_var = ctk.StringVar(value=self.settings.theme or "Obsidian Violet")
-        self.font_scale_var = ctk.IntVar(value=self.settings.font_scale or 100)
+        self.font_scale_var = ctk.IntVar(value=self.settings.font_scale)
         self.status_var = ctk.StringVar(value="Obsidian Mode｜等待資料載入")
         self.footer_var = ctk.StringVar(value="已選 0 筆資料｜版型：未選擇")
         self.case_var = ctk.StringVar(value="案例：尚未載入")
@@ -683,13 +683,14 @@ class WordMergeApp:
         )
 
     def _load_template(self, path: Path) -> None:
-        self.template_path = path
-        conversion: ConversionResult = prepare_template(self.template_path)
+        conversion: ConversionResult = prepare_template(path)
         try:
-            self.template_tags = extract_tags(conversion.converted_path)
+            tags = extract_tags(conversion.converted_path)
             preview_text = self._extract_template_preview_text(conversion.converted_path)
         finally:
             conversion.cleanup()
+        self.template_path = path
+        self.template_tags = tags
         self.paths_var.set(
             f"資料：{self.excel_path.name if self.excel_path else '未選擇'}\n版型：{self.template_path.name}\n範本夾：{self.template_dir_var.get() or '未設定'}"
         )
@@ -830,7 +831,7 @@ class WordMergeApp:
         self.refresh_footer()
 
     def refresh_tag_preview(self) -> None:
-        if not self.dataset and not self.template_tags:
+        if not self.dataset or not self.template_tags:
             self.tag_panel.clear("尚無 Tag")
             return
 

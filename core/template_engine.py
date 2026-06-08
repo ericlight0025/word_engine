@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import io
 import re
 import zipfile
 from dataclasses import dataclass
@@ -67,6 +68,20 @@ def extract_tags(template_path: str | Path) -> list[str]:
     return tags
 
 
+def extract_template_preview(template_path: str | Path) -> str:
+    path = Path(template_path)
+    if not path.exists():
+        raise FileNotFoundError(path)
+    with zipfile.ZipFile(path, "r") as archive:
+        try:
+            xml = archive.read("word/document.xml").decode("utf-8", errors="ignore")
+        except KeyError:
+            return ""
+    text = re.sub(r"<[^>]+>", "", xml)
+    text = re.sub(r"\s+", " ", text).strip()
+    return text[:2000]
+
+
 def build_tag_statuses(tags: list[str], headers: list[str], sample_row: dict[str, str] | None) -> list[TagStatus]:
     statuses: list[TagStatus] = []
     for tag in tags:
@@ -117,6 +132,7 @@ def merge_documents(
     source = Path(template_path)
     destination = Path(output_dir)
     destination.mkdir(parents=True, exist_ok=True)
+    template_bytes = source.read_bytes()
 
     output_files: list[Path] = []
     warnings: list[MergeWarning] = []
@@ -126,10 +142,12 @@ def merge_documents(
         filename = _resolve_filename(source, row, index, naming_field, warnings)
         target = destination / filename
         try:
-            document = DocxTemplate(str(source))
+            document = DocxTemplate(io.BytesIO(template_bytes))
             document.render(dict(row))
             document.save(str(target))
             output_files.append(target)
+        except OSError:
+            raise
         except Exception as exc:
             failures.append(MergeFailure(row_index=index, reason=str(exc)))
 

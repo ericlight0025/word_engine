@@ -6,6 +6,7 @@
   <img src="https://img.shields.io/badge/version-v0.0.1-7C3AED?style=flat-square" alt="version">
   <img src="https://img.shields.io/badge/Python-3.10%2B-A855F7?style=flat-square" alt="python">
   <img src="https://img.shields.io/badge/Desktop-CustomTkinter-C084FC?style=flat-square" alt="desktop">
+  <img src="https://img.shields.io/badge/License-PolyForm%20NC%201.0-blueviolet?style=flat-square" alt="license">
 </p>
 
 <p><strong>把 Excel / CSV 名單，整理成可預覽、可編輯、可批次輸出的 Word 文件流程。</strong></p>
@@ -344,6 +345,19 @@ python -m unittest discover -s tests -v
 - `.xls` 仍可能受底層套件限制，舊式二進位 Excel 不一定能完全讀取
 - `.doc` 需要依賴 LibreOffice
 - Word 預覽目前不是完整排版預覽，而是資料帶值與欄位對照預覽
+
+## 授權
+
+本專案採用 [PolyForm Noncommercial License 1.0.0](./LICENSE)。
+
+- 個人使用、學術研究、非營利組織：✅ 免費自由使用
+- 商業用途（商業產品、收費服務、企業內部商業流程）：❌ 需另行取得商業授權
+
+## 架構文件
+
+技術架構、模組說明與資料流，請參閱：
+
+[ARCHITECTURE.md](./ARCHITECTURE.md)
 
 ## 後續優化
 

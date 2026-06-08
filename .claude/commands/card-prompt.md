@@ -96,8 +96,9 @@ B. Shorts   9:16 直式 — 上方場景圖 + 下方文字區
 
 ## Step 2 — 選擇人物配置
 
-向用戶顯示人物選單：
+依序詢問三個人物設定：
 
+### 2a. 人數
 ```
 請選擇主角人數：
 
@@ -105,11 +106,31 @@ B. Shorts   9:16 直式 — 上方場景圖 + 下方文字區
 2. 雙人 — 兩位東方美女，互動感、故事感更豐富
 ```
 
+### 2b. 情緒
+```
+請選擇人物情緒：
+
+A. 激勵 / 自信  — 眼神堅定、姿態挺拔、微揚下巴
+B. 平靜 / 沉思  — 眼神柔和向遠、若有所思、嘴角放鬆
+C. 感性 / 溫柔  — 微笑、眼神溫暖、略微低頭或側頭
+D. 活潑 / 輕鬆  — 大笑或燦笑、動態感、眼神帶光
+```
+
+### 2c. 景別
+```
+請選擇構圖景別：
+
+I.  特寫（Portrait）  — 臉部至肩膀，表情細節最豐富
+II. 半身（Half body） — 腰部以上，兼顧表情與服裝
+III.全身（Full body） — 完整人物，場景感最強
+```
+
 **人物固定設定（所有 prompt 都帶入）：**
 - 族裔：East Asian woman / women
-- 外型：beautiful, elegant features, natural makeup
-- 表情：自然、符合句子情境（非刻意擺拍）
-- 雙人時：two East Asian women，兩人有互動或共同注視同一方向，避免背對
+- 外型：beautiful, elegant features, natural makeup, flawless skin
+- 表情：依 2b 選擇帶入對應關鍵字
+- 景別：依 2c 選擇帶入 portrait / half body / full body shot
+- 雙人時：two East Asian women，依情緒決定互動方式（激勵→對視、平靜→並肩望遠、感性→輕靠、活潑→大笑互看），避免背對鏡頭
 
 ---
 
@@ -145,42 +166,39 @@ B. Shorts   9:16 直式 — 上方場景圖 + 下方文字區
 
 ---
 
-## Step 4 — 配色系統推導
+## Step 4 — 風格對應表（配色 + 服裝 + 光線）
 
-根據選擇的風格，推導出一組配色，用於：
-- 左側文字區背景色
-- 輸入框 / 標籤 / 邊框等 UI 元素
-- 文字顏色
+根據選擇的風格，自動帶入以下三組設定，無需用戶額外選擇：
 
-每種風格對應的配色基調：
-
-| 風格 | 主色調 | 文字區背景 | 強調色 |
-|------|--------|-----------|--------|
-| Flat illustration | 飽和幾何色（藍/珊瑚/黃） | 白 or 淺灰 | 主色 |
-| Editorial illustration | 大地色 + 深藍 | 米白 | 深藍 |
-| Watercolor | 粉彩（薰衣草/粉藍/米） | 半透明白 | 淡紫 |
-| Ink sketch | 黑白 + 米黃 | 米白 | 深墨色 |
-| Cinematic photography | 深色電影感（深藍/炭灰） | 深色半透明 | 金黃 |
-| Moody lifestyle | 中性棕 + 灰綠 | 深燕麥 | 磚紅 |
-| Minimalist stock photo | 純白 + 淺灰 | 純白 | 黑 |
-| Risograph | 珊瑚 + 青 + 黃（疊色） | 米黃 | 珊瑚紅 |
-| Retro / Vintage poster | 復古橘 + 奶油黃 + 深棕 | 奶油色 | 橘紅 |
-| Swiss / Bauhaus | 原色（紅/藍/黃）+ 黑白 | 白 | 紅 or 藍 |
-| Lo-fi aesthetic | 粉紫 + 粉藍 + 奶油 | 淺粉紫 | 莫蘭迪粉 |
-| Dark academia | 深棕 + 橄欖綠 + 奶油 | 深棕 | 金 |
-| Cottagecore | 草綠 + 奶油 + 玫瑰粉 | 奶油 | 草綠 |
-| Cyberpunk / Neon | 深黑 + 霓虹粉紫 + 電藍 | 深黑 | 霓虹紫 |
+| 風格 | 服裝 | 光線 | 文字區背景 | 強調色 |
+|------|------|------|-----------|--------|
+| Flat illustration | 簡潔幾何印花洋裝或色塊 T-shirt | 均勻明亮的日光 | #F5F5F5 | 主題色 |
+| Editorial illustration | 高領針織衫 + 寬褲或風衣 | 柔和側光、室內自然光 | #F0EBE0 | #1A3A5C |
+| Watercolor | 輕薄碎花洋裝或薄紗罩衫 | 清晨柔光、漫射光 | #F8F4F0 | #B8A4C8 |
+| Ink sketch | 素色亞麻上衣或漢服改良款 | 高對比側光 | #F5F0E8 | #1C1C1C |
+| Cinematic photography | 風衣或皮衣、深色系 | 電影感側逆光、黃金時刻 | #1A1A2E | #C9A84C |
+| Moody lifestyle | 大地色毛衣或燈芯絨外套 | 陰天擴散光、室內暖燈 | #3D2B1F | #8B3A3A |
+| Minimalist stock photo | 純白或米色極簡套裝 | 攝影棚均勻白光 | #FFFFFF | #111111 |
+| Risograph | 復古格紋或撞色拼接外套 | 平面化無陰影光 | #F5E6C8 | #E05A4E |
+| Retro / Vintage poster | 復古泡泡袖洋裝或高腰裙 | 暖黃復古光 | #F2DFA0 | #C0392B |
+| Swiss / Bauhaus | 色塊拼接西裝或幾何圖案服 | 平光、無情緒化 | #FFFFFF | #E63946 |
+| Lo-fi aesthetic | 大學T + 短裙或寬鬆運動套裝 | 傍晚窗邊暖光 | #E8DFF5 | #C3A0C0 |
+| Dark academia | 格紋西裝背心 + 白襯衫 + 領帶 | 圖書館暖燈、燭光感 | #2C1A0E | #C9A84C |
+| Cottagecore | 蕾絲邊洋裝或碎花罩衫 + 草帽 | 正午自然光、花園光 | #F5ECD7 | #7BA05B |
+| Cyberpunk / Neon | 反光材質夾克或賽博龐克戰衣 | 霓虹反射光、夜間逆光 | #0A0A1A | #BC13FE |
 
 ---
 
 ## Step 5 — 產出雙版本 Prompt
 
 兩個版本都必須包含：
-- 格式與比例（YouTube 16:9 或 Shorts 9:16）
-- 對應的版面配置描述
-- 人物描述（單人或雙人東方美女，帶入情境表情與互動）
+- 格式與比例
+- 版面配置描述
+- 人物（人數 + 族裔 + 外型 + 情緒關鍵字 + 景別 + 服裝）
+- 光線設定
 - 風格關鍵字
-- 配色系統
+- 配色
+- Negative prompt
 - 不含任何文字/字母於圖中
 
 ### 版面描述規則
@@ -192,18 +210,32 @@ B. Shorts   9:16 直式 — 上方場景圖 + 下方文字區
 **Shorts 9:16**
 - 上方 10%～45%：主題場景圖，核心視覺置中偏左
 - 中段 45%～72%：純色乾淨背景，5 句文字垂直排列於此區
-- 頂部 10%：不放重要內容（返回鍵、相機 UI）
-- 底部 25%：不放重要內容（用戶名、字幕、音樂）
-- 右側 15%（全段）：全程空出（Like / Comment / Share 按鈕）
-- 左側 3%：留邊距
+- 頂部 10% / 底部 25% / 右側 15%：全程保留給 UI
+
+### Negative Prompt（兩個版本都要加）
+
+通用排除項：
+```
+no text, no letters, no watermark, no signature, no logo,
+no extra limbs, no deformed hands, no blurry face,
+no multiple faces, no background clutter,
+no oversaturated colors, no harsh shadows cutting face
+```
+
+依景別追加：
+- 特寫：`no body below shoulders visible unless necessary`
+- 全身：`no floating feet, no cropped limbs`
+- 雙人：`no merged bodies, no overlapping faces`
 
 ### Gemini (Imagen) 版本
 - 關鍵字驅動，簡潔具體
-- 格式：比例 + 構圖 + 場景 + 風格 + 配色 + 技術參數
+- 格式：比例 + 景別 + 人物 + 服裝 + 光線 + 情緒 + 場景 + 風格 + 配色
+- 最後加 `--no [negative prompt]`
 
 ### GPT / DALL-E 3 版本
-- 自然語句描述（DALL-E 3 理解語意優於關鍵字）
-- 帶入比例、版面配置、光線、情緒說明
+- 自然語句描述
+- 人物、服裝、情緒、光線、場景依序寫入句子
+- 結尾加一行：`Avoid: [negative prompt 條列]`
 
 ---
 
@@ -212,37 +244,65 @@ B. Shorts   9:16 直式 — 上方場景圖 + 下方文字區
 ```
 句子 / 主題：[輸入內容]
 格式：[YouTube 16:9 / Shorts 9:16]
-人物：[單人 / 雙人] 東方美女
+人物：[單人 / 雙人] ｜ 情緒：[激勵/平靜/感性/活潑] ｜ 景別：[特寫/半身/全身]
 風格：[選擇的風格名稱]
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🎨 配色系統
+🎨 設計系統
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-文字區背景：[色票 HEX]
-UI 元素（輸入框、邊框）：[色票 HEX]
-文字顏色：[色票 HEX]
-強調色：[色票 HEX]
+文字區背景：[HEX]
+UI 元素（輸入框、邊框）：[HEX]
+文字顏色：[HEX]
+強調色：[HEX]
+服裝：[對應風格的服裝描述]
+光線：[對應風格的光線描述]
+字型搭配：[推薦中文字型] + [推薦英文字型]（例：思源黑體 + Inter）
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 🟦 Gemini (Imagen) Prompt
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 [Prompt 內容]
+--no [negative prompt]
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 🟩 GPT / DALL-E 3 Prompt
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 [Prompt 內容]
+Avoid: [negative prompt 條列]
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 💡 版面建議
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 格式：[YouTube 16:9 / Shorts 9:16]
 文字區位置：[左側 40% / 垂直 45%～72% 左側 80%]，純色背景，5 句垂直排列
-場景圖位置：[右側 60% / 垂直 8%～45% 偏左]，主題視覺
+場景圖位置：[右側 60% / 垂直 10%～45% 偏左]，主題視覺
 UI 配色：輸入框用 [強調色]，背景用 [文字區背景色]
 ⚠️ YouTube 安全區：頂部 8%、底部 10%、左右各 3~5% 不放重要內容
 ⚠️ Shorts 安全區：頂部 10%、底部 25%、右側 15%（按鈕）、左側 3% 全程保留
 ```
+
+---
+
+## 字型配對參考表
+
+每種風格對應推薦字型（中文 + 英文），輸出時帶入設計系統區塊：
+
+| 風格 | 中文字型 | 英文字型 |
+|------|---------|---------|
+| Flat illustration | 思源黑體 / Noto Sans TC | Inter / DM Sans |
+| Editorial illustration | 思源宋體 | Playfair Display / Cormorant |
+| Watercolor | 内文明朝 / 瀨戶字體 | Lora / Crimson Text |
+| Ink sketch | 王漢宗毛楷 / 文鼎古印體 | Noto Serif / EB Garamond |
+| Cinematic photography | 思源黑體 Bold | Bebas Neue / Oswald |
+| Moody lifestyle | 思源宋體 Light | Libre Baskerville / Merriweather |
+| Minimalist stock photo | 蘋方 / Noto Sans TC Light | Helvetica Neue / Inter |
+| Risograph | jf open 粉圓 | Space Mono / Courier Prime |
+| Retro / Vintage poster | 王漢宗特明體 | Alfa Slab One / Rockwell |
+| Swiss / Bauhaus | 思源黑體 | Futura / Barlow |
+| Lo-fi aesthetic | jf open 粉圓 | Quicksand / Nunito |
+| Dark academia | 思源宋體 | IM Fell English / Cormorant Garamond |
+| Cottagecore | 內文明朝 | Josefin Sans / Raleway |
+| Cyberpunk / Neon | 思源黑體 ExtraBold | Orbitron / Rajdhani |
 
 ---
 
@@ -252,4 +312,5 @@ UI 配色：輸入框用 [強調色]，背景用 [文字區背景色]
 - 圖中不得出現任何文字或字母，避免 AI 圖片產生亂碼
 - 每次格式固定，方便直接複製貼上
 - 抽象概念（perseverance、freedom 等）需主動轉化為具體視覺場景
-- 配色系統輸出時附上 HEX 色碼，方便直接套用到 UI
+- 配色、服裝、光線、字型全部從風格對應表自動帶入，不需用戶額外選擇
+- Negative prompt 每次都要輸出，依景別追加對應排除項

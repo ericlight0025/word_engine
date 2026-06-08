@@ -72,84 +72,72 @@
 
 ## 使用方式
 
-### 模式一：互動模式（Claude Code 用）
 ```
-/card-prompt coffee shop study
+/card-prompt <主題>
 ```
-Claude 會逐步詢問格式、人物、情緒、景別、風格。
-
-### 模式二：一次帶參模式（API / 快速用）
-```
-/card-prompt 主題 | 格式 | 人數 | 情緒 | 景別 | 風格
-```
-
-**範例：**
-```
-/card-prompt coffee shop study | Shorts | 1 | B | II | 11
-```
-
-**參數速查表：**
-
-| 欄位 | 可接受的值 |
-|------|-----------|
-| 格式 | `YT` / `YouTube` = 16:9；`S` / `Shorts` = 9:16 |
-| 人數 | `1` = 單人；`2` = 雙人 |
-| 情緒 | `A` 激勵／`B` 平靜／`C` 感性／`D` 活潑 |
-| 景別 | `I` 特寫／`II` 半身／`III` 全身 |
-| 風格 | 1–14 數字，或風格名稱（如 `Lo-fi`、`Watercolor`） |
-
-**規則：**
-- `$ARGUMENTS` 包含 `|` 時，直接解析所有參數，跳過問答，立刻輸出結果
-- `$ARGUMENTS` 不含 `|` 時，進入互動模式，逐步詢問
-- 參數不足時，只補問缺少的欄位
 
 **輸入內容：** $ARGUMENTS
 
 ---
 
-## Step 1 — 選擇格式
+## Step 1 — 一次問清楚
 
-向用戶顯示格式選單：
+收到主題後，用以下格式一次顯示所有選項，等用戶**一行回答**：
 
 ```
-請選擇發布格式：
+主題：[輸入的主題]
 
-A. YouTube  16:9 橫式 — 左側文字 + 右側場景圖
-B. Shorts   9:16 直式 — 上方場景圖 + 下方文字區
+請選擇（依序回答，空格分隔）：
+
+格式   A=YouTube 16:9   B=Shorts 9:16
+人數   1=單人           2=雙人
+情緒   1=激勵自信       2=平靜沉思       3=感性溫柔   4=活潑輕鬆
+景別   1=特寫           2=半身           3=全身
+風格   1=Flat  2=Editorial  3=Watercolor  4=Ink sketch
+       5=Cinematic  6=Moody  7=Minimalist
+       8=Risograph  9=Retro  10=Bauhaus  11=Lo-fi
+       12=Dark academia  13=Cottagecore  14=Cyberpunk
+
+範例回答：B 1 2 2 11
 ```
+
+收到用戶回答後，解析五個值，直接進入產出流程，**不再追問**。
 
 ---
 
-## Step 2 — 選擇人物配置
+## Step 2 — 解析用戶回答
+
+從用戶的一行回答中依序解析：
+- 第1個值 → 格式（A/B）
+- 第2個值 → 人數（1/2）
+- 第3個值 → 情緒（1-4）
+- 第4個值 → 景別（1-3）
+- 第5個值 → 風格（1-14）
+
+解析完畢，直接進入配色與 prompt 產出，無需再問。
+
+---
+
+## Step 3 — 人物設定
 
 依序詢問三個人物設定：
 
-### 2a. 人數
-```
-請選擇主角人數：
+**情緒對應表：**
 
-1. 單人 — 一位東方美女，視覺集中、氛圍感強
-2. 雙人 — 兩位東方美女，互動感、故事感更豐富
-```
+| 代號 | 情緒 | 表情關鍵字 |
+|------|------|-----------|
+| 1 | 激勵／自信 | determined gaze, chin slightly raised, confident posture |
+| 2 | 平靜／沉思 | soft gaze into distance, relaxed expression, thoughtful |
+| 3 | 感性／溫柔 | warm smile, gentle eyes, head slightly tilted |
+| 4 | 活潑／輕鬆 | bright laugh, sparkling eyes, dynamic energy |
 
-### 2b. 情緒
-```
-請選擇人物情緒：
+**景別對應表：**
 
-A. 激勵 / 自信  — 眼神堅定、姿態挺拔、微揚下巴
-B. 平靜 / 沉思  — 眼神柔和向遠、若有所思、嘴角放鬆
-C. 感性 / 溫柔  — 微笑、眼神溫暖、略微低頭或側頭
-D. 活潑 / 輕鬆  — 大笑或燦笑、動態感、眼神帶光
-```
-
-### 2c. 景別
-```
-請選擇構圖景別：
-
-I.  特寫（Portrait）  — 臉部至肩膀，表情細節最豐富
-II. 半身（Half body） — 腰部以上，兼顧表情與服裝
-III.全身（Full body） — 完整人物，場景感最強
-```
+| 代號 | 景別 | 英文 |
+|------|------|------|
+| 1 | 特寫 | portrait shot, face to shoulders |
+| 2 | 半身 | half body shot, waist up |
+| 3 | 全身 | full body shot |
 
 **人物固定設定（所有 prompt 都帶入）：**
 - 族裔：East Asian woman / women
@@ -157,38 +145,6 @@ III.全身（Full body） — 完整人物，場景感最強
 - 表情：依 2b 選擇帶入對應關鍵字
 - 景別：依 2c 選擇帶入 portrait / half body / full body shot
 - 雙人時：two East Asian women，依情緒決定互動方式（激勵→對視、平靜→並肩望遠、感性→輕靠、活潑→大笑互看），避免背對鏡頭
-
----
-
-## Step 3 — 顯示風格選單
-
-向用戶顯示以下選單，請他選擇一個風格編號：
-
-```
-請選擇卡片圖片風格：
-
-【插畫類】
-1.  Flat illustration      — 扁平幾何，現代簡潔，文字好疊加
-2.  Editorial illustration — 雜誌感插畫，有設計感
-3.  Watercolor             — 水彩，柔和溫暖
-4.  Ink sketch             — 線條素描，手繪感
-
-【攝影類】
-5.  Cinematic photography  — 電影感，有故事氛圍
-6.  Moody lifestyle        — 生活風格，情緒感強
-7.  Minimalist stock photo — 極簡背景，文字好疊加
-
-【設計感類】
-8.  Risograph              — 復古油印風，顆粒感
-9.  Retro / Vintage poster — 復古海報風
-10. Swiss / Bauhaus design — 幾何構成，強設計感
-11. Lo-fi aesthetic        — 柔和低飽和，學習氛圍
-
-【氛圍類】
-12. Dark academia          — 書卷古典氛圍
-13. Cottagecore            — 鄉村自然，溫馨
-14. Cyberpunk / Neon       — 霓虹科技感
-```
 
 ---
 

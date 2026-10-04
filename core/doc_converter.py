@@ -23,6 +23,8 @@ def libreoffice_exists() -> bool:
 
 def prepare_template(path: str | Path) -> ConversionResult:
     template_path = Path(path)
+    if not template_path.is_file():
+        raise FileNotFoundError(template_path)
     suffix = template_path.suffix.lower()
     if suffix == ".docx":
         return ConversionResult(converted_path=template_path)
@@ -35,17 +37,24 @@ def prepare_template(path: str | Path) -> ConversionResult:
     output_dir = Path(temp_dir.name)
     command = [
         "soffice",
+        f"-env:UserInstallation={(output_dir / 'profile').as_uri()}",
         "--headless",
         "--convert-to",
         "docx",
         "--outdir",
         str(output_dir),
-        str(template_path),
+        str(template_path.resolve()),
     ]
-    completed = subprocess.run(command, capture_output=True, text=True, check=False)
-    converted_path = output_dir / f"{template_path.stem}.docx"
-    if completed.returncode != 0 or not converted_path.exists():
+    try:
+        completed = subprocess.run(command, capture_output=True, text=True, check=False, timeout=60)
+        converted_path = output_dir / f"{template_path.stem}.docx"
+        if completed.returncode != 0 or not converted_path.is_file():
+            stderr = completed.stderr.strip() or completed.stdout.strip() or "未知錯誤"
+            raise RuntimeError(f".doc 轉換失敗：{stderr}")
+    except subprocess.TimeoutExpired as exc:
         temp_dir.cleanup()
-        stderr = completed.stderr.strip() or completed.stdout.strip() or "未知錯誤"
-        raise RuntimeError(f".doc 轉換失敗：{stderr}")
+        raise RuntimeError(".doc 轉換超過 60 秒，已取消並清除暫存檔") from exc
+    except BaseException:
+        temp_dir.cleanup()
+        raise
     return ConversionResult(converted_path=converted_path, temp_dir=temp_dir)

@@ -33,6 +33,7 @@ class DataPanel(ctk.CTkFrame):
         self.inline_entry: tk.Entry | None = None
         self.inline_item_id: str | None = None
         self.inline_column_index: int | None = None
+        self.editor_row_index: int | None = None
 
         header = ctk.CTkFrame(self, fg_color="#1f2229")
         header.pack(fill="x", padx=16, pady=(16, 10))
@@ -172,6 +173,8 @@ class DataPanel(ctk.CTkFrame):
         ).pack(side="left", padx=10)
 
     def load_rows(self, headers: list[str], rows: list[dict[str, str]]) -> None:
+        self._close_inline_editor(save=False)
+        self.sort_state.clear()
         self.headers = headers
         self.rows_data = rows
         self.visible_headers = headers[: self.MAX_VISIBLE_COLUMNS]
@@ -252,6 +255,7 @@ class DataPanel(ctk.CTkFrame):
         self.on_save_headers(payload)
 
     def load_editor(self, headers: list[str], row: dict[str, str], index: int | None) -> None:
+        self.editor_row_index = index
         for child in self.editor_scroll.winfo_children():
             child.destroy()
         self.editor_entries = {}
@@ -376,10 +380,11 @@ class DataPanel(ctk.CTkFrame):
         item_id = self.inline_item_id
         column_index = self.inline_column_index
         new_value = entry.get()
-        entry.destroy()
         self.inline_entry = None
         self.inline_item_id = None
         self.inline_column_index = None
+        # 先清除狀態，再銷毀控制項，避免 FocusOut 重入而再次存取已銷毀的 Entry。
+        entry.destroy()
 
         if not save or item_id is None or column_index is None:
             return

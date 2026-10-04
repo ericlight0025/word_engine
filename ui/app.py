@@ -79,6 +79,7 @@ class WordMergeApp:
         self.template_path: Path | None = None
         self.output_dir: Path = Path(__file__).resolve().parents[1] / "output"
         self.dataset: ExcelDataset | None = None
+        self.has_unsaved_changes = False
         self.template_tags: list[str] = []
         self.demo_assets: DemoAssets | None = None
         self.settings_store = SettingsStore(Path(__file__).resolve().parents[1] / "settings.json")
@@ -99,6 +100,53 @@ class WordMergeApp:
         self._build_layout()
         self._load_demo_assets()
         self.refresh_footer()
+        self.root.protocol("WM_DELETE_WINDOW", self._on_close)
+
+    def _capture_editor_changes(self) -> None:
+        """切換選取、輸出或存檔前，先保留編輯區尚未套用的內容。"""
+        self.data_panel._close_inline_editor(save=True)
+        index = self.data_panel.editor_row_index
+        if self.dataset is None or index is None or not (0 <= index < len(self.dataset.rows)):
+            return
+        payload = self.data_panel._editor_payload()
+        row = {header: payload.get(header, "") for header in self.dataset.headers}
+        if row != self.dataset.rows[index]:
+            self.dataset.rows[index] = row
+            self.data_panel.update_row(index, self.dataset.headers, row)
+            self.has_unsaved_changes = True
+
+    def _mark_saved(self) -> None:
+        self.has_unsaved_changes = False
+        if self.dataset:
+            self.dataset.source_headers = self.dataset.headers.copy()
+            self.dataset.source_rows = [
+                {header: str(row.get(header) or "").strip() for header in self.dataset.headers}
+                for row in self.dataset.rows
+            ]
+
+    def _confirm_data_replacement(self) -> bool:
+        self._capture_editor_changes()
+        if not self.has_unsaved_changes:
+            return True
+        choice = messagebox.askyesnocancel(
+            "尚未儲存變更", "資料已修改，是否先存回來源檔？\n是：存檔後繼續；否：放棄變更；取消：保留目前畫面。",
+        )
+        if choice is None:
+            return False
+        if choice:
+            if self.dataset is None or self.excel_path is None:
+                return False
+            try:
+                write_dataset(self.excel_path, self.dataset.headers, self.dataset.rows, source_dataset=self.dataset)
+            except Exception as exc:
+                messagebox.showerror("存檔失敗", str(exc))
+                return False
+            self._mark_saved()
+        return True
+
+    def _on_close(self) -> None:
+        if self._confirm_data_replacement():
+            self.root.destroy()
 
     def _build_layout(self) -> None:
         shell = ctk.CTkFrame(self.root, fg_color="#101114", corner_radius=0)
@@ -540,7 +588,6 @@ class WordMergeApp:
         self.demo_assets = build_demo_assets(project_root)
         if self.settings.output_dir:
             self.output_dir = Path(self.settings.output_dir)
-        self.output_dir.mkdir(parents=True, exist_ok=True)
         self.output_dir_var.set(str(self.output_dir))
         default_data_dir = Path(self.settings.data_dir) if self.settings.data_dir else self.demo_assets.csv_path.parent
         default_template_dir = Path(self.settings.template_dir) if self.settings.template_dir else self.demo_assets.template_path.parent
@@ -581,18 +628,18 @@ class WordMergeApp:
             self.font_scale_slider.configure(button_color=preset["accent"], button_hover_color=preset["accent_hover"], progress_color=preset["accent"])
 
     def _tabular_files(self, directory: Path) -> list[Path]:
-        if not directory.exists():
+        if not directory.is_dir():
             return []
         return sorted(
             [
                 path
                 for path in directory.iterdir()
-                if path.is_file() and path.suffix.lower() in {".csv", ".xlsx", ".xls"}
+                if path.is_file() and path.suffix.lower() in {".csv", ".xlsx"}
             ]
         )
 
     def _template_files(self, directory: Path) -> list[Path]:
-        if not directory.exists():
+        if not directory.is_dir():
             return []
         return sorted(
             [
@@ -603,10 +650,15 @@ class WordMergeApp:
         )
 
     def refresh_folder_sources(self) -> None:
+        self._capture_editor_changes()
         data_dir = Path(self.data_dir_var.get()).expanduser() if self.data_dir_var.get().strip() else None
         template_dir = Path(self.template_dir_var.get()).expanduser() if self.template_dir_var.get().strip() else None
-        data_files = self._tabular_files(data_dir) if data_dir else []
-        template_files = self._template_files(template_dir) if template_dir else []
+        try:
+            data_files = self._tabular_files(data_dir) if data_dir else []
+            template_files = self._template_files(template_dir) if template_dir else []
+        except OSError as exc:
+            messagebox.showerror("資料夾讀取失敗", str(exc))
+            return
 
         self.data_files_map = {path.name: path for path in data_files}
         self.template_files_map = {path.name: path for path in template_files}
@@ -619,19 +671,49 @@ class WordMergeApp:
         if data_files:
             selected_name = self.data_file_var.get() if self.data_file_var.get() in self.data_files_map else data_files[0].name
             self.data_file_var.set(selected_name)
-            self._load_dataset(self.data_files_map[selected_name])
+            selected_path = self.data_files_map[selected_name]
+            if not (selected_path == self.excel_path and self.has_unsaved_changes):
+                try:
+                    if not self._load_dataset(selected_path):
+                        self.data_file_var.set(self.excel_path.name if self.excel_path else "")
+                        return
+                except Exception as exc:
+                    self.data_file_var.set(self.excel_path.name if self.excel_path else "")
+                    messagebox.showerror("資料讀取失敗", str(exc))
+                    return
         else:
+            if not self._confirm_data_replacement():
+                return
             self.data_file_var.set("")
+            self.dataset = None
+            self.excel_path = None
+            self.has_unsaved_changes = False
+            self.data_panel.load_rows([], [])
+            self.naming_field_var.set("")
+            self.naming_field_combo.configure(values=[""])
 
         if template_files:
             selected_name = self.template_file_var.get() if self.template_file_var.get() in self.template_files_map else template_files[0].name
             self.template_file_var.set(selected_name)
-            self._load_template(self.template_files_map[selected_name])
+            try:
+                self._load_template(self.template_files_map[selected_name])
+            except Exception as exc:
+                self.template_file_var.set(self.template_path.name if self.template_path else "")
+                messagebox.showerror("版型讀取失敗", str(exc))
+                return
         else:
             self.template_file_var.set("")
+            self.template_path = None
+            self.template_tags = []
+            self._set_template_preview("尚未選擇版型。")
             self._refresh_template_picker()
 
+        self.refresh_tag_preview()
         self.refresh_footer()
+        self.paths_var.set(
+            f"資料：{self.excel_path.name if self.excel_path else '未選擇'}\n"
+            f"版型：{self.template_path.name if self.template_path else '未選擇'}"
+        )
 
     def choose_data_dir(self) -> None:
         path = filedialog.askdirectory(title="選擇 CSV / Excel 資料夾")
@@ -649,47 +731,61 @@ class WordMergeApp:
         self.refresh_folder_sources()
         self.status_var.set("已更新範本資料夾")
 
-    def save_settings(self) -> None:
-        self.output_dir = Path(self.output_dir_var.get()).expanduser()
-        self.output_dir.mkdir(parents=True, exist_ok=True)
-        self.settings = AppSettings(
+    def save_settings(self) -> bool:
+        output_dir = Path(self.output_dir_var.get()).expanduser()
+        settings = AppSettings(
             data_dir=self.data_dir_var.get().strip(),
             template_dir=self.template_dir_var.get().strip(),
-            output_dir=str(self.output_dir),
+            output_dir=str(output_dir),
             theme=self.theme_var.get().strip(),
             font_scale=int(self.font_scale_var.get()),
         )
-        self.settings_store.save(self.settings)
+        try:
+            output_dir.mkdir(parents=True, exist_ok=True)
+            self.settings_store.save(settings)
+        except Exception as exc:
+            messagebox.showerror("設定儲存失敗", str(exc))
+            return False
+        self.output_dir = output_dir
+        self.settings = settings
         self.apply_visual_settings()
         self.status_var.set("設定已儲存")
+        return True
 
     def apply_settings_and_refresh(self) -> None:
-        self.save_settings()
+        if not self.save_settings():
+            return
         self.refresh_folder_sources()
         if hasattr(self, "settings_window") and self.settings_window.winfo_exists():
             self.settings_window.focus()
 
-    def _load_dataset(self, path: Path) -> None:
+    def _load_dataset(self, path: Path) -> bool:
+        if not self._confirm_data_replacement():
+            return False
         if path.suffix.lower() == ".csv":
             self.dataset = read_csv(path)
         else:
             self.dataset = read_excel(path)
         self.excel_path = path
+        self.has_unsaved_changes = False
         self.data_panel.load_rows(self.dataset.headers, self.dataset.rows)
         self.naming_field_combo.configure(values=[""] + self.dataset.headers)
         self.naming_field_var.set("合約編號" if "合約編號" in self.dataset.headers else "")
         self.paths_var.set(
             f"資料：{self.excel_path.name}\n版型：{self.template_path.name if self.template_path else '未選擇'}\n資料夾：{self.data_dir_var.get() or '未設定'}"
         )
+        self.refresh_tag_preview()
+        return True
 
     def _load_template(self, path: Path) -> None:
-        self.template_path = path
-        conversion: ConversionResult = prepare_template(self.template_path)
+        conversion: ConversionResult = prepare_template(path)
         try:
-            self.template_tags = extract_tags(conversion.converted_path)
+            tags = extract_tags(conversion.converted_path)
             preview_text = self._extract_template_preview_text(conversion.converted_path)
         finally:
             conversion.cleanup()
+        self.template_path = path
+        self.template_tags = tags
         self.paths_var.set(
             f"資料：{self.excel_path.name if self.excel_path else '未選擇'}\n版型：{self.template_path.name}\n範本夾：{self.template_dir_var.get() or '未設定'}"
         )
@@ -747,8 +843,11 @@ class WordMergeApp:
         if not path:
             return
         try:
-            self._load_dataset(path)
+            if not self._load_dataset(path):
+                self.data_file_var.set(self.excel_path.name if self.excel_path else "")
+                return
         except Exception as exc:
+            self.data_file_var.set(self.excel_path.name if self.excel_path else "")
             messagebox.showerror("資料讀取失敗", str(exc))
             return
         self.status_var.set(f"已切換資料：{path.name}")
@@ -761,6 +860,7 @@ class WordMergeApp:
         try:
             self._load_template(path)
         except Exception as exc:
+            self.template_file_var.set(self.template_path.name if self.template_path else "")
             messagebox.showerror("版型讀取失敗", str(exc))
             return
         self.status_var.set(f"已切換版型：{path.name}")
@@ -769,12 +869,13 @@ class WordMergeApp:
     def import_excel(self) -> None:
         path = filedialog.askopenfilename(
             title="選擇 Excel 檔案",
-            filetypes=[("Excel", "*.xlsx *.xls"), ("All files", "*.*")],
+            filetypes=[("Excel", "*.xlsx"), ("All files", "*.*")],
         )
         if not path:
             return
         try:
-            self._load_dataset(Path(path))
+            if not self._load_dataset(Path(path)):
+                return
         except Exception as exc:
             messagebox.showerror("Excel 匯入失敗", str(exc))
             return
@@ -818,7 +919,9 @@ class WordMergeApp:
         self.refresh_footer()
 
     def on_selection_changed(self, _event=None) -> None:
+        self._capture_editor_changes()
         self._sync_editor_with_selection()
+        self.refresh_tag_preview()
         self.refresh_footer()
 
     def select_all_rows(self) -> None:
@@ -850,7 +953,7 @@ class WordMergeApp:
             return []
         indices = self.data_panel.get_selected_indices()
         if not indices:
-            return self.dataset.rows
+            return []
         return [self.dataset.rows[index] for index in indices if 0 <= index < len(self.dataset.rows)]
 
     def _sync_editor_with_selection(self) -> None:
@@ -858,7 +961,7 @@ class WordMergeApp:
             self.data_panel.load_editor([], {}, None)
             return
         index = self.data_panel.get_primary_selected_index()
-        if index is None or index >= len(self.dataset.rows):
+        if index is None or not (0 <= index < len(self.dataset.rows)):
             self.data_panel.load_editor(self.dataset.headers, {}, None)
             return
         self.data_panel.load_editor(self.dataset.headers, self.dataset.rows[index], index)
@@ -868,40 +971,49 @@ class WordMergeApp:
             return
         for header in self.dataset.headers:
             self.dataset.rows[index][header] = payload.get(header, "")
+        self.has_unsaved_changes = True
         self.data_panel.update_row(index, self.dataset.headers, self.dataset.rows[index])
         self._sync_editor_with_selection()
+        self.refresh_tag_preview()
         self.status_var.set(f"已更新第 {index + 1} 筆資料，尚未寫回來源檔")
 
     def update_single_cell(self, row_index: int, header: str, value: str) -> None:
         if not self.dataset or not (0 <= row_index < len(self.dataset.rows)):
             return
         self.dataset.rows[row_index][header] = value
+        self.has_unsaved_changes = True
         self.data_panel.update_row(row_index, self.dataset.headers, self.dataset.rows[row_index])
         selected_index = self.data_panel.get_primary_selected_index()
         if selected_index == row_index:
             self._sync_editor_with_selection()
         self.status_var.set(f"已更新第 {row_index + 1} 筆的 {header}，尚未寫回來源檔")
+        self.refresh_tag_preview()
 
     def save_source_file(self, index: int, payload: dict[str, str]) -> None:
         self.save_current_row(index, payload)
         if not self.dataset or not self.excel_path:
             return
         try:
-            write_dataset(self.excel_path, self.dataset.headers, self.dataset.rows)
+            write_dataset(self.excel_path, self.dataset.headers, self.dataset.rows, source_dataset=self.dataset)
         except Exception as exc:
             messagebox.showerror("存檔失敗", str(exc))
             return
+        self._mark_saved()
         self.status_var.set(f"已存回來源檔：{self.excel_path.name}")
 
     def save_headers(self, payload: list[tuple[str, str]]) -> None:
         if not self.dataset:
+            return
+        self._capture_editor_changes()
+        if [old for old, _new in payload] != self.dataset.headers:
+            messagebox.showwarning("欄名無效", "欄名清單與目前資料不一致，請重新載入編輯區")
             return
 
         new_headers: list[str] = []
         seen: set[str] = set()
         rename_map: dict[str, str] = {}
         for old_header, new_header in payload:
-            final_header = new_header or old_header
+            final_header = new_header.strip()
             if not final_header:
                 messagebox.showwarning("欄名無效", "欄名不能留空")
                 return
@@ -912,25 +1024,34 @@ class WordMergeApp:
             new_headers.append(final_header)
             rename_map[old_header] = final_header
 
-        self.dataset.rows = [
+        new_rows = [
             {rename_map[old]: row.get(old, "") for old in self.dataset.headers}
             for row in self.dataset.rows
         ]
+        if self.excel_path:
+            try:
+                write_dataset(self.excel_path, new_headers, new_rows, source_dataset=self.dataset)
+            except Exception as exc:
+                messagebox.showerror("欄名存檔失敗", str(exc))
+                return
+        selected = self.data_panel.get_selected_indices()
+        self.dataset.rows = new_rows
         self.dataset.headers = new_headers
         self.data_panel.load_rows(self.dataset.headers, self.dataset.rows)
+        self.data_panel.clear_selection()
+        if selected:
+            self.data_panel.table.selection_set([str(index + 1) for index in selected])
         self.naming_field_combo.configure(values=[""] + self.dataset.headers)
         if self.naming_field_var.get() not in self.dataset.headers:
             self.naming_field_var.set("合約編號" if "合約編號" in self.dataset.headers else "")
         self.refresh_tag_preview()
 
         if self.excel_path:
-            try:
-                write_dataset(self.excel_path, self.dataset.headers, self.dataset.rows)
-            except Exception as exc:
-                messagebox.showerror("欄名存檔失敗", str(exc))
-                return
-
-        self.status_var.set("欄名已更新並存回來源檔")
+            self._mark_saved()
+            self.status_var.set("欄名已更新並存回來源檔")
+        else:
+            self.has_unsaved_changes = True
+            self.status_var.set("欄名已更新，尚未寫回來源檔")
         self.refresh_footer()
 
     def _missing_tag_statuses(self) -> list[TagStatus]:
@@ -944,11 +1065,16 @@ class WordMergeApp:
         return [item for item in statuses if item.status == "missing"]
 
     def generate_documents(self) -> None:
+        self._capture_editor_changes()
         if not self.dataset:
             messagebox.showwarning("缺少資料", "請先匯入 Excel")
             return
         if not self.template_path:
             messagebox.showwarning("缺少版型", "請先選擇 Word 版型")
+            return
+        rows = self._selected_rows()
+        if not rows:
+            messagebox.showwarning("未選取資料", "請先選取要產出的資料列；清除選取後不會產出文件。")
             return
 
         missing = self._missing_tag_statuses()
@@ -969,7 +1095,7 @@ class WordMergeApp:
         try:
             summary = merge_documents(
                 template_path=conversion.converted_path,
-                rows=self._selected_rows(),
+                rows=rows,
                 output_dir=self.output_dir,
                 naming_field=self.naming_field_var.get().strip(),
             )
@@ -984,7 +1110,7 @@ class WordMergeApp:
 
         message_lines = [
             f"✅ 成功產出：{summary.success_count} 份",
-            f"⚠️ 有缺失欄位：{summary.warning_count} 份",
+            f"⚠️ 有警告：{summary.warning_count} 份",
             f"❌ 失敗：{summary.failure_count} 份",
             "",
             f"輸出位置：{self.output_dir}",
@@ -1014,8 +1140,7 @@ class WordMergeApp:
     def refresh_footer(self) -> None:
         selected_count = len(self.data_panel.get_selected_indices()) if self.dataset else 0
         template_name = self.template_path.name if self.template_path else "未選擇"
-        row_count = len(self.dataset.rows) if self.dataset else 0
-        display_count = selected_count or row_count
+        display_count = selected_count
         self.footer_var.set(f"已選 {display_count} 筆資料｜版型：{template_name}｜輸出：{self.output_dir}")
 
 
